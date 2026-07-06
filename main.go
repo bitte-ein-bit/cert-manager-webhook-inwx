@@ -4,16 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/jetstack/cert-manager/pkg/acme/webhook/apis/acme/v1alpha1"
-	"github.com/jetstack/cert-manager/pkg/acme/webhook/cmd"
-	certmgrv1 "github.com/jetstack/cert-manager/pkg/apis/meta/v1"
+	"github.com/cert-manager/cert-manager/pkg/acme/webhook/apis/acme/v1alpha1"
+	"github.com/cert-manager/cert-manager/pkg/acme/webhook/cmd"
+	certmgrv1 "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	"github.com/nrdcg/goinwx"
 	"github.com/pquerna/otp/totp"
-	extapi "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	extapi "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 	"strings"
 	"time"
 )
@@ -66,9 +66,9 @@ func (s *solver) Present(ch *v1alpha1.ChallengeRequest) error {
 
 	defer func() {
 		if err := client.Account.Logout(); err != nil {
-			klog.Errorf("failed to log out from %s: %v", client.BaseURL, err)
+			klog.Errorf("failed to log out from INWX: %v", err)
 		}
-		klog.V(3).Infof("logged out from %s", client.BaseURL)
+		klog.V(3).Info("logged out from INWX")
 	}()
 
 	var request = &goinwx.NameserverRecordRequest{
@@ -109,9 +109,9 @@ func (s *solver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
 
 	defer func() {
 		if err := client.Account.Logout(); err != nil {
-			klog.Errorf("failed to log out from %s: %v", client.BaseURL, err)
+			klog.Errorf("failed to log out from INWX: %v", err)
 		}
-		klog.V(3).Infof("logged out from %s", client.BaseURL)
+		klog.V(3).Info("logged out from INWX")
 	}()
 
 	response, err := client.Nameservers.Info(&goinwx.NameserverInfoRequest{
@@ -233,8 +233,7 @@ func (s *solver) newClientFromChallenge(ch *v1alpha1.ChallengeRequest) (*goinwx.
 
 	client := *goinwx.NewClient(creds.Username, creds.Password, &goinwx.ClientOptions{Sandbox: cfg.Sandbox})
 
-	err = client.Account.Login()
-	if err != nil {
+	if _, err = client.Account.Login(); err != nil {
 		klog.Error(err)
 		return nil, &cfg, fmt.Errorf("%v", err)
 	}
@@ -246,7 +245,7 @@ func (s *solver) newClientFromChallenge(ch *v1alpha1.ChallengeRequest) (*goinwx.
 		}
 	}
 
-	klog.V(3).Infof("logged in at %s", client.BaseURL)
+	klog.V(3).Info("logged in at INWX")
 
 	return &client, &cfg, nil
 }

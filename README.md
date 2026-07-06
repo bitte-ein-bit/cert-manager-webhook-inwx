@@ -156,13 +156,13 @@ spec:
 
 ### Requirements
 
-- [go](https://golang.org/) >= 1.13.0
+- [go](https://golang.org/) >= 1.25.0
 
 ### Running the test suite
 
-1. Download test binaries
+1. Provision the Kubernetes test binaries (etcd, kube-apiserver) via `setup-envtest`
     ```bash
-    scripts/fetch-test-binaries.sh
+    export KUBEBUILDER_ASSETS="$(scripts/fetch-test-binaries.sh)"
     ```
 
 1. Create two test accounts (one without 2FA and one with 2FA enabled) at <https://ote.inwx.com/en/customer/signup> or use existing ones.
@@ -208,7 +208,7 @@ Tested with Ubuntu:
 ```bash
 sudo snap install microk8s --classic
 sudo microk8s.enable dns rbac
-sudo microk8s.kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.0.1/cert-manager.yaml
+sudo microk8s.kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.20.3/cert-manager.yaml
 sudo microk8s.config > /tmp/microk8s.config
 export KUBECONFIG=/tmp/microk8s.config
 helm install --namespace cert-manager cert-manager-webhook-inwx deploy/cert-manager-webhook-inwx
