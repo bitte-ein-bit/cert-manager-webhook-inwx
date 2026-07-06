@@ -15,9 +15,8 @@
 /cert-manager-webhook-inwx
 
 /kubebuilder
-testdata/config.json
+# Rendered from the *.tpl templates with real (test) credentials — never commit
 testdata/config-otp.json
-testdata/secret-inwx-credentials.yaml
 testdata/secret-inwx-credentials-otp.yaml
 .idea/
 
