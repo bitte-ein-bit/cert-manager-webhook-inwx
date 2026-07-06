@@ -6,17 +6,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bitte-ein-bit/cert-manager-webhook-inwx/test"
 	acmetest "github.com/cert-manager/cert-manager/test/acme"
 	"github.com/cert-manager/cert-manager/test/acme/server"
 	"github.com/go-logr/logr"
-	"gitlab.com/smueller18/cert-manager-webhook-inwx/test"
 	extapi "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
 
 // This project only supports INWX accounts protected by two-factor
 // authentication, so the suite exercises the OTP code paths exclusively.
 var (
-	zoneTwoFA = "smueller18mfa.de."
+	zoneTwoFA = "example.de."
 	fqdn      string
 )
 

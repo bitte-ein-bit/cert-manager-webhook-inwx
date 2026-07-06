@@ -1,4 +1,4 @@
-module gitlab.com/smueller18/cert-manager-webhook-inwx
+module github.com/bitte-ein-bit/cert-manager-webhook-inwx
 
 go 1.25.8
 
