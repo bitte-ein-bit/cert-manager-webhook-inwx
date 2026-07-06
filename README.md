@@ -16,7 +16,7 @@ The following table lists the configurable parameters of the cert-manager chart 
 
 | Parameter | Description | Default |
 | --------- | ----------- | ------- |
-| `groupName` | Group name of the API service. | `cert-manager-webhook-inwx.smueller18.gitlab.com` |
+| `groupName` | Group name of the API service. | `cert-manager-webhook-inwx.bitte-ein-bit.github.com` |
 | `credentialsSecretRefs` | Names of secrets where INWX credentials are stored. Used for RBAC to allow reading the secret by the service account name of webhook. | `['inwx-credentials']` |
 | `deployment.loglevel` | Number for the log level verbosity of webhook deployment | 2 |
 | `certManager.namespace` | Namespace where cert-manager is deployed to. | `cert-manager` |
@@ -77,7 +77,7 @@ spec:
     solvers:
       - dns01:
           webhook:
-            groupName: cert-manager-webhook-inwx.smueller18.gitlab.com
+            groupName: cert-manager-webhook-inwx.bitte-ein-bit.github.com
             solverName: inwx
             config:
               ttl: 300 # default 300

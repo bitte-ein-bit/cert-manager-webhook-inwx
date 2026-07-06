@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.7.0
+
+- **Breaking:** renamed the API `groupName` to `cert-manager-webhook-inwx.bitte-ein-bit.github.com`. Update the `groupName` in your `Issuer`/`ClusterIssuer` `webhook` config to match when upgrading.
+- Made the 2FA/OTP unlock robust: retry across TOTP windows so rapid or concurrent logins no longer fail on INWX's single-use OTP policy
+- Renamed the Go module to `github.com/bitte-ein-bit/cert-manager-webhook-inwx`
+
 ## v0.6.0
 
 - Modernized dependencies: cert-manager `v1.20.3` (module rename `jetstack` → `cert-manager`), Kubernetes libraries `v0.35.2`, `klog/v2`, goinwx `v0.12.0`, Go `1.25`

@@ -45,7 +45,7 @@ for quick feedback; don't expect `go test` to pass without credentials.
 
 ## Conventions
 
-- The API `groupName` is `cert-manager-webhook-inwx.smueller18.gitlab.com`.
+- The API `groupName` is `cert-manager-webhook-inwx.bitte-ein-bit.github.com`.
   It is baked into `main.go`, the chart's `values.yaml`, and `Issuer` examples.
   Changing it is a breaking change for existing deployments — keep them in sync
   if you ever do.

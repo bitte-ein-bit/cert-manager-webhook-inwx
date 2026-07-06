@@ -1,4 +1,4 @@
-groupName: cert-manager-webhook-inwx.smueller18.gitlab.com
+groupName: cert-manager-webhook-inwx.bitte-ein-bit.github.com
 
 credentialsSecretRefs:
 - inwx-credentials

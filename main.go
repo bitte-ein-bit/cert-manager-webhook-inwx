@@ -19,7 +19,7 @@ import (
 )
 
 func main() {
-	cmd.RunWebhookServer("cert-manager-webhook-inwx.smueller18.gitlab.com",
+	cmd.RunWebhookServer("cert-manager-webhook-inwx.bitte-ein-bit.github.com",
 		&solver{},
 	)
 }
@@ -239,9 +239,8 @@ func (s *solver) newClientFromChallenge(ch *v1alpha1.ChallengeRequest) (*goinwx.
 	}
 
 	if creds.OTPKey != "" {
-		err, formattedError := tryToUnlockWithOTPKey(creds, client, true)
-		if err != nil {
-			return nil, &cfg, formattedError
+		if err := unlockWithOTPKey(creds, &client); err != nil {
+			return nil, &cfg, err
 		}
 	}
 
@@ -250,22 +249,40 @@ func (s *solver) newClientFromChallenge(ch *v1alpha1.ChallengeRequest) (*goinwx.
 	return &client, &cfg, nil
 }
 
-func tryToUnlockWithOTPKey(creds *credentials, client goinwx.Client, retryAfterPauseToSatisfyInwxSingleOTPKeyUsagePolicy bool) (error, error) {
-	tan, err := totp.GenerateCode(creds.OTPKey, time.Now())
-	if err != nil {
-		klog.Error(err)
-		return nil, fmt.Errorf("error generating opt-key: %v", err)
+// totpPeriod is the TOTP time-step INWX uses (RFC 6238 default).
+const totpPeriod = 30 * time.Second
+
+// unlockWithOTPKey completes the 2FA step of an INWX session. INWX rejects reuse
+// of a TOTP code within its time window, so on failure we wait for the next
+// window — which yields a fresh, never-used code — and retry a few times. This
+// keeps concurrent or rapid logins (e.g. issuing several certificates at once)
+// from failing on the single-use OTP policy.
+func unlockWithOTPKey(creds *credentials, client *goinwx.Client) error {
+	const maxAttempts = 4
+
+	var lastErr error
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		now := time.Now()
+
+		tan, err := totp.GenerateCode(creds.OTPKey, now)
+		if err != nil {
+			klog.Error(err)
+			return fmt.Errorf("error generating otp-key: %v", err)
+		}
+
+		if err = client.Account.Unlock(tan); err == nil {
+			return nil
+		}
+		lastErr = err
+		klog.Warningf("OTP unlock attempt %d/%d failed: %v", attempt, maxAttempts, err)
+
+		if attempt < maxAttempts {
+			// Sleep until just past the next TOTP window boundary so the next
+			// attempt uses a code that has not been used before.
+			time.Sleep(totpPeriod - time.Duration(now.UnixNano())%totpPeriod + time.Second)
+		}
 	}
 
-	err = client.Account.Unlock(tan)
-
-	if err != nil && retryAfterPauseToSatisfyInwxSingleOTPKeyUsagePolicy == true {
-		time.Sleep(30 * time.Second)
-		return tryToUnlockWithOTPKey(creds, client, false)
-	} else if err != nil {
-		klog.Error(err)
-		return err, fmt.Errorf("error Unlock opt-key: %v", err)
-	}
-
-	return err, nil
+	klog.Error(lastErr)
+	return fmt.Errorf("error unlocking otp-key after %d attempts: %v", maxAttempts, lastErr)
 }
