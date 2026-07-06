@@ -30,17 +30,20 @@ jobs:
     timeout-minutes: 60
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
           cache: true
 
       - name: Provision Kubernetes test binaries (envtest)
         run: |
-          go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+          # setup-go pins GOTOOLCHAIN=local; allow the tool build to fetch a
+          # newer Go if setup-envtest@latest needs one (it doesn't affect the
+          # project's own build/test, which use the go.mod version).
+          GOTOOLCHAIN=auto go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
           ASSETS="$("$(go env GOPATH)/bin/setup-envtest" use -p path)"
           echo "KUBEBUILDER_ASSETS=$ASSETS" >> "$GITHUB_ENV"
           # cert-manager's test framework locates etcd/kube-apiserver/kubectl on
