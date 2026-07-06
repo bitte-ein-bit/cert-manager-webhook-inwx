@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.6.0
+
+- Modernized dependencies: cert-manager `v1.20.3` (module rename `jetstack` → `cert-manager`), Kubernetes libraries `v0.35.2`, `klog/v2`, goinwx `v0.12.0`, Go `1.25`
+- Migrated apiextensions API `v1beta1` → `v1`
+- Added an end-to-end conformance workflow running against the INWX OTE sandbox on every PR
+- Dropped support for non-2FA INWX accounts (2FA is now required)
+
 ## v0.5.1
 
 - Maintained fork: container images now published to `ghcr.io/bitte-ein-bit/cert-manager-webhook-inwx`
