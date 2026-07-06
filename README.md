@@ -21,8 +21,8 @@ The following table lists the configurable parameters of the cert-manager chart 
 | `deployment.loglevel` | Number for the log level verbosity of webhook deployment | 2 |
 | `certManager.namespace` | Namespace where cert-manager is deployed to. | `cert-manager` |
 | `certManager.serviceAccountName` | Service account of cert-manager installation. | `cert-manager` |
-| `image.repository` | Image repository | `registry.gitlab.com/smueller18/cert-manager-webhook-inwx` |
-| `image.tag` | Image tag | `v0.4.1` |
+| `image.repository` | Image repository | `ghcr.io/bitte-ein-bit/cert-manager-webhook-inwx` |
+| `image.tag` | Image tag | `v0.5.0` |
 | `image.pullPolicy` | Image pull policy | `IfNotPresent` |
 | `service.type` | API service type | `ClusterIP` |
 | `service.port` | API service port | `443` |
@@ -198,7 +198,7 @@ spec:
 ### Building the container image
 
 ```bash
-docker build -t registry.gitlab.com/smueller18/cert-manager-webhook-inwx:master .
+docker build -t ghcr.io/bitte-ein-bit/cert-manager-webhook-inwx:master .
 ```
 
 ### Running the full suite with microk8s

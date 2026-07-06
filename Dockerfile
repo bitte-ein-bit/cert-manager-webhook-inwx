@@ -1,17 +1,17 @@
-FROM golang:1.13-alpine AS build
+FROM --platform=$BUILDPLATFORM golang:1.23-alpine AS build
 
-ARG GOARCH="amd64"
-ARG GOARM=""
+ARG TARGETOS
+ARG TARGETARCH
+ARG TARGETVARIANT
 
 WORKDIR /workspace
-
-ENV GOPATH="/workspace/.go"
 
 COPY . .
 
 RUN go mod download
 
-RUN CGO_ENABLED=0 GOARCH=$GOARCH GOARM=$GOARM go build -v -o webhook -ldflags '-w -s -extldflags "-static"' .
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} GOARM=${TARGETVARIANT#v} \
+    go build -v -o webhook -ldflags '-w -s -extldflags "-static"' .
 
 FROM scratch
 
