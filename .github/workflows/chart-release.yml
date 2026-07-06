@@ -6,6 +6,7 @@ on:
     paths:
       - 'deploy/**'
       - '.github/workflows/chart-release.yml'
+  workflow_dispatch:
 
 jobs:
   release:
@@ -30,5 +31,6 @@ jobs:
         uses: helm/chart-releaser-action@v1.6.0
         with:
           charts_dir: deploy
+          skip_existing: true
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
