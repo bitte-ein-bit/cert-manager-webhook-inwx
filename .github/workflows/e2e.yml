@@ -1,0 +1,72 @@
+name: E2E (INWX OTE)
+
+# Runs the cert-manager DNS-01 conformance suite against a real INWX OTE
+# (sandbox) account with two-factor authentication enabled.
+#
+# Requires these repository secrets/variables:
+#   secrets.INWX_USER_OTP       OTE account username
+#   secrets.INWX_PASSWORD_OTP   OTE account password
+#   secrets.INWX_OTPKEY         TOTP shared secret (2FA)
+#   vars.TEST_ZONE_NAME_WITH_TWO_FA  a domain registered in that account's
+#                                    nameserver, with a trailing dot, e.g. "example.de."
+#
+# The OTP tests are slow: INWX rejects reuse of a TOTP code, so each login may
+# wait up to 30s for a fresh code. Budget several minutes per run.
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  e2e:
+    # Skip on PRs from forks, where secrets are not available.
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Provision Kubernetes test binaries (envtest)
+        run: |
+          go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+          ASSETS="$("$(go env GOPATH)/bin/setup-envtest" use -p path)"
+          echo "KUBEBUILDER_ASSETS=$ASSETS" >> "$GITHUB_ENV"
+          # cert-manager's test framework locates etcd/kube-apiserver/kubectl on
+          # PATH (or via TEST_ASSET_* env vars), not via KUBEBUILDER_ASSETS.
+          echo "$ASSETS" >> "$GITHUB_PATH"
+          ls -l "$ASSETS"
+
+      - name: Render test configuration from templates
+        env:
+          INWX_USER_OTP: ${{ secrets.INWX_USER_OTP }}
+          INWX_PASSWORD_OTP: ${{ secrets.INWX_PASSWORD_OTP }}
+          INWX_OTPKEY: ${{ secrets.INWX_OTPKEY }}
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq gettext-base
+          export INWX_USER_OTP_BASE64=$(printf '%s' "$INWX_USER_OTP" | base64 -w0)
+          export INWX_PASSWORD_OTP_BASE64=$(printf '%s' "$INWX_PASSWORD_OTP" | base64 -w0)
+          export INWX_OTPKEY_BASE64=$(printf '%s' "$INWX_OTPKEY" | base64 -w0)
+          envsubst < testdata/config-otp.json.tpl > testdata/config-otp.json
+          envsubst < testdata/secret-inwx-credentials-otp.yaml.tpl > testdata/secret-inwx-credentials-otp.yaml
+
+      - name: Run conformance suite (2FA)
+        env:
+          TEST_ZONE_NAME_WITH_TWO_FA: ${{ vars.TEST_ZONE_NAME_WITH_TWO_FA }}
+        run: |
+          if [ -z "$TEST_ZONE_NAME_WITH_TWO_FA" ]; then
+            echo "::error::vars.TEST_ZONE_NAME_WITH_TWO_FA is not set (a domain in the OTE account, trailing dot)."
+            exit 1
+          fi
+          go test -v -timeout 45m -run TwoFA .

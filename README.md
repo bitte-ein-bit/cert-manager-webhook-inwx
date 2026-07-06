@@ -156,44 +156,36 @@ spec:
 
 ### Requirements
 
-- [go](https://golang.org/) >= 1.13.0
+- [go](https://golang.org/) >= 1.25.0
 
 ### Running the test suite
 
-1. Download test binaries
+1. Provision the Kubernetes test binaries (etcd, kube-apiserver, kubectl) via `setup-envtest` and put them on your `PATH` (cert-manager's test framework discovers them there)
     ```bash
-    scripts/fetch-test-binaries.sh
+    export PATH="$(scripts/fetch-test-binaries.sh):$PATH"
     ```
 
-1. Create two test accounts (one without 2FA and one with 2FA enabled) at <https://ote.inwx.com/en/customer/signup> or use existing ones.
+1. Create a test account **with 2FA enabled** at <https://ote.inwx.com/en/customer/signup> (or use an existing one). Only two-factor-protected accounts are supported.
 
-   1. Without 2FA
+   1. Enable 2FA at <https://ote.inwx.com/en/setting/access#> and note the TOTP shared secret.
 
-      1. Go to <https://ote.inwx.de/en/nameserver2#tab=ns> and add a new domain
+   1. Go to <https://ote.inwx.de/en/nameserver2#tab=ns> and add a domain to use as the test zone.
 
-      1. Copy `testdata/config.json.tpl` to `testdata/config.json` and replace username and password placeholders
+   1. Copy `testdata/config-otp.json.tpl` to `testdata/config-otp.json` and replace the username, password and OTP-key placeholders.
 
-      1. Copy `testdata/secret-inwx-credentials.yaml.tpl` to `testdata/secret-inwx-credentials.yaml` and replace username and password placeholders
-
-   1. With 2FA
-
-      1. Enable 2FA at <https://ote.inwx.com/en/setting/access#>
-
-      1. Go to <https://ote.inwx.de/en/nameserver2#tab=ns> and add a new domain
-
-      1. Copy `testdata/config-otp.json.tpl` to `testdata/config-otp.json` and replace username, password and OTP placeholders
-
-      1. Copy `testdata/secret-inwx-credentials-otp.yaml.tpl` to `testdata/secret-inwx-credentials-otp.yaml` and replace username, password and OTP placeholders
+   1. Copy `testdata/secret-inwx-credentials-otp.yaml.tpl` to `testdata/secret-inwx-credentials-otp.yaml` and replace the base64-encoded username, password and OTP-key placeholders.
 
 1. Download dependencies
     ```bash
     go mod download
     ```
 
-1. Run tests with your created domains
+1. Run the tests against your domain (note the trailing dot)
     ```bash
-    TEST_ZONE_NAME="$YOUR_NEW_DOMAIN." TEST_ZONE_NAME_WITH_TWO_FA="$YOUR_NEW_DOMAIN_WITH_TWO_FA." go test -cover .
+    TEST_ZONE_NAME_WITH_TWO_FA="$YOUR_DOMAIN." go test -v -timeout 45m -run TwoFA .
     ```
+
+   The suite is slow: INWX rejects reuse of a TOTP code, so each login may wait up to 30s for a fresh one.
 
 ### Building the container image
 
@@ -208,7 +200,7 @@ Tested with Ubuntu:
 ```bash
 sudo snap install microk8s --classic
 sudo microk8s.enable dns rbac
-sudo microk8s.kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.0.1/cert-manager.yaml
+sudo microk8s.kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.20.3/cert-manager.yaml
 sudo microk8s.config > /tmp/microk8s.config
 export KUBECONFIG=/tmp/microk8s.config
 helm install --namespace cert-manager cert-manager-webhook-inwx deploy/cert-manager-webhook-inwx

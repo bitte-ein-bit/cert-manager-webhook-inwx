@@ -1,126 +1,24 @@
 package main
 
 import (
-	logf "github.com/jetstack/cert-manager/pkg/logs"
-	"github.com/jetstack/cert-manager/test/acme/dns"
-	"github.com/jetstack/cert-manager/test/acme/dns/server"
-	"gitlab.com/smueller18/cert-manager-webhook-inwx/test"
-	"io/ioutil"
-	extapi "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"log"
+	"context"
 	"os"
 	"testing"
 	"time"
+
+	acmetest "github.com/cert-manager/cert-manager/test/acme"
+	"github.com/cert-manager/cert-manager/test/acme/server"
+	"github.com/go-logr/logr"
+	"gitlab.com/smueller18/cert-manager-webhook-inwx/test"
+	extapi "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
 
+// This project only supports INWX accounts protected by two-factor
+// authentication, so the suite exercises the OTP code paths exclusively.
 var (
-	zone      = "smueller18.de."
 	zoneTwoFA = "smueller18mfa.de."
 	fqdn      string
 )
-
-func TestRunSuite(t *testing.T) {
-
-	if os.Getenv("TEST_ZONE_NAME") != "" {
-		zone = os.Getenv("TEST_ZONE_NAME")
-	}
-	fqdn = "cert-manager-dns01-tests." + zone
-
-	ctx := logf.NewContext(nil, nil, t.Name())
-
-	srv := &server.BasicServer{
-		Handler: &test.Handler{
-			Log: logf.FromContext(ctx, "dnsBasicServer"),
-			TxtRecords: map[string][][]string{
-				fqdn: {
-					{},
-					{},
-					{"123d=="},
-					{"123d=="},
-				},
-			},
-			Zones: []string{zone},
-		},
-	}
-
-	if err := srv.Run(ctx); err != nil {
-		t.Fatalf("failed to start test server: %v", err)
-	}
-	defer srv.Shutdown()
-
-	d, err := ioutil.ReadFile("testdata/config.json")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fixture := dns.NewFixture(&solver{},
-		dns.SetResolvedZone(zone),
-		dns.SetResolvedFQDN(fqdn),
-		dns.SetAllowAmbientCredentials(false),
-		dns.SetDNSServer(srv.ListenAddr()),
-		dns.SetBinariesPath("kubebuilder/bin"),
-		dns.SetPropagationLimit(time.Duration(60)*time.Second),
-		dns.SetUseAuthoritative(false),
-		// Set to false because INWX implementation deletes all records
-		dns.SetStrict(false),
-		dns.SetConfig(&extapi.JSON{
-			Raw: d,
-		}),
-	)
-
-	fixture.RunConformance(t)
-}
-
-func TestRunSuiteWithSecret(t *testing.T) {
-
-	if os.Getenv("TEST_ZONE_NAME") != "" {
-		zone = os.Getenv("TEST_ZONE_NAME")
-	}
-	fqdn = "cert-manager-dns01-tests-with-secret." + zone
-
-	ctx := logf.NewContext(nil, nil, t.Name())
-
-	srv := &server.BasicServer{
-		Handler: &test.Handler{
-			Log: logf.FromContext(ctx, "dnsBasicServerSecret"),
-			TxtRecords: map[string][][]string{
-				fqdn: {
-					{},
-					{},
-					{"123d=="},
-					{"123d=="},
-				},
-			},
-			Zones: []string{zone},
-		},
-	}
-
-	if err := srv.Run(ctx); err != nil {
-		t.Fatalf("failed to start test server: %v", err)
-	}
-	defer srv.Shutdown()
-
-	d, err := ioutil.ReadFile("testdata/config.secret.json")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fixture := dns.NewFixture(&solver{},
-		dns.SetResolvedZone(zone),
-		dns.SetResolvedFQDN(fqdn),
-		dns.SetAllowAmbientCredentials(false),
-		dns.SetDNSServer(srv.ListenAddr()),
-		dns.SetManifestPath("testdata/secret-inwx-credentials.yaml"),
-		dns.SetBinariesPath("kubebuilder/bin"),
-		dns.SetPropagationLimit(time.Duration(60)*time.Second),
-		dns.SetUseAuthoritative(false),
-		dns.SetConfig(&extapi.JSON{
-			Raw: d,
-		}),
-	)
-
-	fixture.RunConformance(t)
-}
 
 func TestRunSuiteWithTwoFA(t *testing.T) {
 
@@ -130,11 +28,11 @@ func TestRunSuiteWithTwoFA(t *testing.T) {
 
 	fqdn = "cert-manager-dns01-tests." + zoneTwoFA
 
-	ctx := logf.NewContext(nil, nil, t.Name())
+	ctx := context.Background()
 
 	srv := &server.BasicServer{
 		Handler: &test.Handler{
-			Log: logf.FromContext(ctx, "dnsBasicServer"),
+			Log: logr.Discard(),
 			TxtRecords: map[string][][]string{
 				fqdn: {
 					{},
@@ -147,27 +45,26 @@ func TestRunSuiteWithTwoFA(t *testing.T) {
 		},
 	}
 
-	if err := srv.Run(ctx); err != nil {
+	if err := srv.Run(ctx, "udp"); err != nil {
 		t.Fatalf("failed to start test server: %v", err)
 	}
 	defer srv.Shutdown()
 
-	d, err := ioutil.ReadFile("testdata/config-otp.json")
+	d, err := os.ReadFile("testdata/config-otp.json")
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 
-	fixture := dns.NewFixture(&solver{},
-		dns.SetResolvedZone(zoneTwoFA),
-		dns.SetResolvedFQDN(fqdn),
-		dns.SetAllowAmbientCredentials(false),
-		dns.SetDNSServer(srv.ListenAddr()),
-		dns.SetBinariesPath("kubebuilder/bin"),
-		dns.SetPropagationLimit(time.Duration(60)*time.Second),
-		dns.SetUseAuthoritative(false),
+	fixture := acmetest.NewFixture(&solver{},
+		acmetest.SetResolvedZone(zoneTwoFA),
+		acmetest.SetResolvedFQDN(fqdn),
+		acmetest.SetAllowAmbientCredentials(false),
+		acmetest.SetDNSServer(srv.ListenAddr()),
+		acmetest.SetPropagationLimit(time.Duration(60)*time.Second),
+		acmetest.SetUseAuthoritative(false),
 		// Set to false because INWX implementation deletes all records
-		dns.SetStrict(false),
-		dns.SetConfig(&extapi.JSON{
+		acmetest.SetStrict(false),
+		acmetest.SetConfig(&extapi.JSON{
 			Raw: d,
 		}),
 	)
@@ -182,11 +79,11 @@ func TestRunSuiteWithSecretAndTwoFA(t *testing.T) {
 	}
 	fqdn = "cert-manager-dns01-tests-with-secret." + zoneTwoFA
 
-	ctx := logf.NewContext(nil, nil, t.Name())
+	ctx := context.Background()
 
 	srv := &server.BasicServer{
 		Handler: &test.Handler{
-			Log: logf.FromContext(ctx, "dnsBasicServerSecret"),
+			Log: logr.Discard(),
 			TxtRecords: map[string][][]string{
 				fqdn: {
 					{},
@@ -199,26 +96,25 @@ func TestRunSuiteWithSecretAndTwoFA(t *testing.T) {
 		},
 	}
 
-	if err := srv.Run(ctx); err != nil {
+	if err := srv.Run(ctx, "udp"); err != nil {
 		t.Fatalf("failed to start test server: %v", err)
 	}
 	defer srv.Shutdown()
 
-	d, err := ioutil.ReadFile("testdata/config-otp.secret.json")
+	d, err := os.ReadFile("testdata/config-otp.secret.json")
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 
-	fixture := dns.NewFixture(&solver{},
-		dns.SetResolvedZone(zoneTwoFA),
-		dns.SetResolvedFQDN(fqdn),
-		dns.SetAllowAmbientCredentials(false),
-		dns.SetDNSServer(srv.ListenAddr()),
-		dns.SetManifestPath("testdata/secret-inwx-credentials-otp.yaml"),
-		dns.SetBinariesPath("kubebuilder/bin"),
-		dns.SetPropagationLimit(time.Duration(60)*time.Second),
-		dns.SetUseAuthoritative(false),
-		dns.SetConfig(&extapi.JSON{
+	fixture := acmetest.NewFixture(&solver{},
+		acmetest.SetResolvedZone(zoneTwoFA),
+		acmetest.SetResolvedFQDN(fqdn),
+		acmetest.SetAllowAmbientCredentials(false),
+		acmetest.SetDNSServer(srv.ListenAddr()),
+		acmetest.SetManifestPath("testdata/secret-inwx-credentials-otp.yaml"),
+		acmetest.SetPropagationLimit(time.Duration(60)*time.Second),
+		acmetest.SetUseAuthoritative(false),
+		acmetest.SetConfig(&extapi.JSON{
 			Raw: d,
 		}),
 	)
