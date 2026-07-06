@@ -14,7 +14,8 @@ certManager:
 
 image:
   repository: ghcr.io/bitte-ein-bit/cert-manager-webhook-inwx
-  tag: v0.5.0
+  # Defaults to the chart's appVersion when empty.
+  tag: ""
   pullPolicy: IfNotPresent
 
 nameOverride: ""

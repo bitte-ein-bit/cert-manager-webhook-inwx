@@ -2,7 +2,7 @@
 
 This project provides a cert-manager ACME Webhook for [INWX](https://inwx.de/) and a corresponding helm chart.
 
-The helm chart is listed at Artifact Hub in repository [smueller18](https://artifacthub.io/packages/search?page=1&repo=smueller18) at <https://artifacthub.io/packages/helm/smueller18/cert-manager-webhook-inwx>.
+This is a maintained fork of the archived [smueller18/cert-manager-webhook-inwx](https://gitlab.com/smueller18/cert-manager-webhook-inwx). Container images are published to `ghcr.io/bitte-ein-bit/cert-manager-webhook-inwx` and the helm chart to <https://bitte-ein-bit.github.io/cert-manager-webhook-inwx>.
 
 ## Requirements
 
@@ -22,7 +22,7 @@ The following table lists the configurable parameters of the cert-manager chart 
 | `certManager.namespace` | Namespace where cert-manager is deployed to. | `cert-manager` |
 | `certManager.serviceAccountName` | Service account of cert-manager installation. | `cert-manager` |
 | `image.repository` | Image repository | `ghcr.io/bitte-ein-bit/cert-manager-webhook-inwx` |
-| `image.tag` | Image tag | `v0.5.0` |
+| `image.tag` | Image tag (defaults to chart `appVersion` when empty) | `""` |
 | `image.pullPolicy` | Image pull policy | `IfNotPresent` |
 | `service.type` | API service type | `ClusterIP` |
 | `service.port` | API service port | `443` |
@@ -40,9 +40,9 @@ Follow the [instructions](https://cert-manager.io/docs/installation/) using the 
 ### Webhook
 
 ```bash
-helm repo add smueller18 https://smueller18.gitlab.io/helm-charts
+helm repo add cert-manager-webhook-inwx https://bitte-ein-bit.github.io/cert-manager-webhook-inwx
 helm repo update
-helm install --namespace cert-manager cert-manager-webhook-inwx smueller18/cert-manager-webhook-inwx
+helm install --namespace cert-manager cert-manager-webhook-inwx cert-manager-webhook-inwx/cert-manager-webhook-inwx
 ```
 
 **Note**: The kubernetes resources used to install the Webhook should be deployed within the same namespace as the cert-manager.
