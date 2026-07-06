@@ -41,7 +41,12 @@ jobs:
       - name: Provision Kubernetes test binaries (envtest)
         run: |
           go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
-          echo "KUBEBUILDER_ASSETS=$("$(go env GOPATH)/bin/setup-envtest" use -p path)" >> "$GITHUB_ENV"
+          ASSETS="$("$(go env GOPATH)/bin/setup-envtest" use -p path)"
+          echo "KUBEBUILDER_ASSETS=$ASSETS" >> "$GITHUB_ENV"
+          # cert-manager's test framework locates etcd/kube-apiserver/kubectl on
+          # PATH (or via TEST_ASSET_* env vars), not via KUBEBUILDER_ASSETS.
+          echo "$ASSETS" >> "$GITHUB_PATH"
+          ls -l "$ASSETS"
 
       - name: Render test configuration from templates
         env:

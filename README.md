@@ -160,9 +160,9 @@ spec:
 
 ### Running the test suite
 
-1. Provision the Kubernetes test binaries (etcd, kube-apiserver) via `setup-envtest`
+1. Provision the Kubernetes test binaries (etcd, kube-apiserver, kubectl) via `setup-envtest` and put them on your `PATH` (cert-manager's test framework discovers them there)
     ```bash
-    export KUBEBUILDER_ASSETS="$(scripts/fetch-test-binaries.sh)"
+    export PATH="$(scripts/fetch-test-binaries.sh):$PATH"
     ```
 
 1. Create a test account **with 2FA enabled** at <https://ote.inwx.com/en/customer/signup> (or use an existing one). Only two-factor-protected accounts are supported.
